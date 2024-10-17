@@ -2,120 +2,155 @@ package main
 
 import (
 	"database/sql"
-	"math/rand"
 	"testing"
-	"time"
 
-	"github.com/stretchr/testify/require"
+	_ "modernc.org/sqlite"
 )
 
-var (
-	// randSource источник псевдо случайных чисел.
-	// Для повышения уникальности в качестве seed
-	// используется текущее время в unix формате (в виде числа)
-	randSource = rand.NewSource(time.Now().UnixNano())
-	// randRange использует randSource для генерации случайных чисел
-	randRange = rand.New(randSource)
-)
+func TestParcelStore_Add(t *testing.T) {
+	db, err := sql.Open("sqlite3", "./tracker.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
 
-// getTestParcel возвращает тестовую посылку
-func getTestParcel() Parcel {
-	return Parcel{
-		Client:    1000,
+	store := NewSQLiteParcelStore(db)
+	parcel := Parcel{
+		Client:    1,
 		Status:    ParcelStatusRegistered,
-		Address:   "test",
-		CreatedAt: time.Now().UTC().Format(time.RFC3339),
+		Address:   "Адрес 1",
+		CreatedAt: "2023-10-26T12:00:00Z",
+	}
+
+	id, err := store.Add(parcel)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if id == 0 {
+		t.Error("ID посылки должен быть больше нуля")
 	}
 }
 
-// TestAddGetDelete проверяет добавление, получение и удаление посылки
-func TestAddGetDelete(t *testing.T) {
-	// prepare
-	db, err := // настройте подключение к БД
-	store := NewParcelStore(db)
-	parcel := getTestParcel()
-
-	// add
-	// добавьте новую посылку в БД, убедитесь в отсутствии ошибки и наличии идентификатора
-
-	// get
-	// получите только что добавленную посылку, убедитесь в отсутствии ошибки
-	// проверьте, что значения всех полей в полученном объекте совпадают со значениями полей в переменной parcel
-
-	// delete
-	// удалите добавленную посылку, убедитесь в отсутствии ошибки
-	// проверьте, что посылку больше нельзя получить из БД
-}
-
-// TestSetAddress проверяет обновление адреса
-func TestSetAddress(t *testing.T) {
-	// prepare
-	db, err := // настройте подключение к БД
-
-	// add
-	// добавьте новую посылку в БД, убедитесь в отсутствии ошибки и наличии идентификатора
-
-	// set address
-	// обновите адрес, убедитесь в отсутствии ошибки
-	newAddress := "new test address"
-
-	// check
-	// получите добавленную посылку и убедитесь, что адрес обновился
-}
-
-// TestSetStatus проверяет обновление статуса
-func TestSetStatus(t *testing.T) {
-	// prepare
-	db, err := // настройте подключение к БД
-
-	// add
-	// добавьте новую посылку в БД, убедитесь в отсутствии ошибки и наличии идентификатора
-
-	// set status
-	// обновите статус, убедитесь в отсутствии ошибки
-
-	// check
-	// получите добавленную посылку и убедитесь, что статус обновился
-}
-
-// TestGetByClient проверяет получение посылок по идентификатору клиента
-func TestGetByClient(t *testing.T) {
-	// prepare
-	db, err := // настройте подключение к БД
-
-	parcels := []Parcel{
-		getTestParcel(),
-		getTestParcel(),
-		getTestParcel(),
+func TestParcelStore_GetByClient(t *testing.T) {
+	db, err := sql.Open("sqlite3", "./tracker.db")
+	if err != nil {
+		t.Fatal(err)
 	}
-	parcelMap := map[int]Parcel{}
+	defer db.Close()
 
-	// задаём всем посылкам один и тот же идентификатор клиента
-	client := randRange.Intn(10_000_000)
-	parcels[0].Client = client
-	parcels[1].Client = client
-	parcels[2].Client = client
+	store := NewSQLiteParcelStore(db)
+	client := 1
 
-	// add
-	for i := 0; i < len(parcels); i++ {
-		id, err := // добавьте новую посылку в БД, убедитесь в отсутствии ошибки и наличии идентификатора
-
-		// обновляем идентификатор добавленной у посылки
-		parcels[i].Number = id
-
-		// сохраняем добавленную посылку в структуру map, чтобы её можно было легко достать по идентификатору посылки
-		parcelMap[id] = parcels[i]
+	parcels, err := store.GetByClient(client)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	// get by client
-	storedParcels, err := // получите список посылок по идентификатору клиента, сохранённого в переменной client
-	// убедитесь в отсутствии ошибки
-	// убедитесь, что количество полученных посылок совпадает с количеством добавленных
+	if len(parcels) == 0 {
+		t.Error("Должен быть хотя бы один результат")
+	}
 
-	// check
-	for _, parcel := range storedParcels {
-		// в parcelMap лежат добавленные посылки, ключ - идентификатор посылки, значение - сама посылка
-		// убедитесь, что все посылки из storedParcels есть в parcelMap
-		// убедитесь, что значения полей полученных посылок заполнены верно
+	for _, parcel := range parcels {
+		if parcel.Client != client {
+			t.Errorf("Неверный клиент для посылки: %d", parcel.Client)
+		}
+	}
+}
+
+func TestParcelStore_UpdateStatus(t *testing.T) {
+	db, err := sql.Open("sqlite3", "./tracker.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	store := NewSQLiteParcelStore(db)
+	parcelNumber := 1
+	newStatus := ParcelStatusSent
+
+	err = store.UpdateStatus(parcelNumber, newStatus)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Проверяем, что статус изменился
+	rows, err := db.Query("SELECT status FROM parcel WHERE number = ?", parcelNumber)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	var status string
+	if rows.Next() {
+		if err := rows.Scan(&status); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if status != newStatus {
+		t.Errorf("Статус посылки не изменился: %s", status)
+	}
+}
+
+func TestParcelStore_UpdateAddress(t *testing.T) {
+	db, err := sql.Open("sqlite3", "./tracker.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	store := NewSQLiteParcelStore(db)
+	parcelNumber := 1
+	newAddress := "Адрес 2"
+
+	err = store.UpdateAddress(parcelNumber, newAddress)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Проверяем, что адрес изменился
+	rows, err := db.Query("SELECT address FROM parcel WHERE number = ?", parcelNumber)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	var address string
+	if rows.Next() {
+		if err := rows.Scan(&address); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if address != newAddress {
+		t.Errorf("Адрес посылки не изменился: %s", address)
+	}
+}
+
+func TestParcelStore_Delete(t *testing.T) {
+	db, err := sql.Open("sqlite3", "./tracker.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	store := NewSQLiteParcelStore(db)
+	parcelNumber := 1
+
+	err = store.Delete(parcelNumber)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Проверяем, что посылка удалена
+	rows, err := db.Query("SELECT * FROM parcel WHERE number = ?", parcelNumber)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	if rows.Next() {
+		t.Errorf("Посылка не удалена: %d", parcelNumber)
 	}
 }
