@@ -14,7 +14,7 @@ func TestParcelStore_Add(t *testing.T) {
 	}
 	defer db.Close()
 
-	store := NewSQLiteParcelStore(db)
+	store := NewParcelStore(db)
 	parcel := Parcel{
 		Client:    1,
 		Status:    ParcelStatusRegistered,
@@ -39,7 +39,7 @@ func TestParcelStore_GetByClient(t *testing.T) {
 	}
 	defer db.Close()
 
-	store := NewSQLiteParcelStore(db)
+	store := NewParcelStore(db)
 	client := 1
 
 	parcels, err := store.GetByClient(client)
@@ -65,7 +65,7 @@ func TestParcelStore_UpdateStatus(t *testing.T) {
 	}
 	defer db.Close()
 
-	store := NewSQLiteParcelStore(db)
+	store := NewParcelStore(db)
 	parcelNumber := 1
 	newStatus := ParcelStatusSent
 
@@ -100,7 +100,7 @@ func TestParcelStore_UpdateAddress(t *testing.T) {
 	}
 	defer db.Close()
 
-	store := NewSQLiteParcelStore(db)
+	store := NewParcelStore(db)
 	parcelNumber := 1
 	newAddress := "Адрес 2"
 
@@ -135,7 +135,7 @@ func TestParcelStore_Delete(t *testing.T) {
 	}
 	defer db.Close()
 
-	store := NewSQLiteParcelStore(db)
+	store := NewParcelStore(db)
 	parcelNumber := 1
 
 	err = store.Delete(parcelNumber)

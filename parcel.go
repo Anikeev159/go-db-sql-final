@@ -113,6 +113,40 @@ func (s ParcelStore) SetAddress(number int, address string) error {
 	return nil
 }
 
+func (s *ParcelStore) UpdateAddress(number int, address string) error {
+	// Подготовка SQL-запроса
+	stmt, err := s.db.Prepare("UPDATE parcel SET address = ? WHERE number = ?")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	// Выполнение запроса
+	_, err = stmt.Exec(address, number)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *ParcelStore) UpdateStatus(number int, status string) error {
+	// Подготовка SQL-запроса
+	stmt, err := s.db.Prepare("UPDATE parcel SET status = ? WHERE number = ?")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	// Выполнение запроса
+	_, err = stmt.Exec(status, number)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s ParcelStore) Delete(number int) error {
 	// Подготовка SQL-запроса
 	stmt, err := s.db.Prepare("DELETE FROM parcel WHERE number = ? AND status = ?")
